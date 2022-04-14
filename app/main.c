@@ -113,6 +113,9 @@ int main()
 		}
 	}
 
+	//complete release resource
+	Decoder_release();
+
     // free buffer
 	if(NULL != tmpbuf){
 		free(tmpbuf);

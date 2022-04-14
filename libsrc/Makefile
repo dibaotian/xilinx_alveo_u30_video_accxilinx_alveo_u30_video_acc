@@ -7,7 +7,7 @@ LDFLAGS = $(shell pkg-config --libs libxma2api libxma2plugin xvbm libxrm)
 
 TARGET = libu30_xma_codec.so
 
-BUILD_DIR  := ../build
+BUILD_DIR  := ../app
 SRC_DIR    := src
 # SRC_DIR    := .
 OBJ_DIR    := obj

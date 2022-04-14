@@ -2533,6 +2533,12 @@ void Decoder_Init()
     }
 }
 
+void Decoder_release()
+{
+    xlnx_dec_cleanup_ctx(&ctx);
+    printf("Decoder_release\n");
+}
+
 int xvbm_conv_get_plane_size(int32_t width,int32_t height,XmaFormatType format,int32_t plane_id)
 {
     int p_size;
