@@ -23,8 +23,6 @@
 #include <time.h>
 #include <errno.h>
 
-
-
 #define FLAG_HELP             "help"
 #define FLAG_DEVICE_ID        "d"
 #define FLAG_STREAM_LOOP      "stream_loop"
@@ -415,33 +413,6 @@ typedef struct {
 #endif
 
 #define XRM_PRECISION_1000000_BIT_MASK(load) ((load << 8))
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 static const char *XLNX_LA_EXT_PARAMS[] = {
     "ip",
@@ -2626,22 +2597,29 @@ int Decoder_frame(unsigned char* inbuffer,unsigned char* outbuffer,int insize)
 	xbuffer->alloc_size  = insize;
 	xbuffer->is_eof 	 = 0;
 	xbuffer->pts		 = pts;
-	rc = xma_dec_session_send_data(dec_ctx->xma_dec_session, xbuffer, &data_used);
-	if(rc == XMA_ERROR) 
-	{
-		DECODER_APP_LOG_ERROR("Error sending data to decoder. Data %d\n", dec_ctx->num_frames_sent);
-		exit(DEC_APP_ERROR);
-	}
-	if(rc == XMA_TRY_AGAIN) 
-	{
-		printf("==========XMA_TRY_AGAIN============\n");
-	}
+
+    while(1){
+        rc = xma_dec_session_send_data(dec_ctx->xma_dec_session, xbuffer, &data_used);
+        if(rc == XMA_ERROR) 
+        {
+            DECODER_APP_LOG_ERROR("Error sending data to decoder. Data %d\n", dec_ctx->num_frames_sent);
+            exit(DEC_APP_ERROR);
+        }
+
+        if(rc == XMA_TRY_AGAIN) 
+        {
+            printf("==========XMA_TRY_AGAIN============\n");
+        }
+
+        if(rc == XMA_SUCCESS){}
+    }
+	
 	
     ret = xma_dec_session_recv_frame(dec_ctx->xma_dec_session, dec_ctx->channel_ctx.xframe);
     if(ret == XMA_SUCCESS)
 	{
 		size_t buffer_size =0;
-		int size = 1920*1080;
+		// int size = 1920*1080;
 		unsigned char* hbuf = xlnx_dec_get_buffer_from_fpga(dec_ctx, &buffer_size);
 		dec_output_data(hbuf,outbuffer);
     }

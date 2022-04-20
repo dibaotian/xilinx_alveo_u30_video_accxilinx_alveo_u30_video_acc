@@ -7,6 +7,14 @@
 #include <xma.h>
 #include <xvbm.h>
 
+XlnxIPMapping xlnx_ip_mapping[XRM_MAX_NUM_IP] = {
+    {"DECODER", "xrmU30DecPlugin", "decoder", "DECODER_MPSOC",
+     "kernel_vcu_decoder", 1},
+    {"SCALER", "xrmU30ScalPlugin", "scaler", "SCALER_MPSOC", "", 0},
+    {"LOOKAHEAD", "xrmU30EncPlugin", "lookahead", "LOOKAHEAD_MPSOC", "", 0},
+    {"ENCODER", "xrmU30EncPlugin", "encoder", "ENCODER_MPSOC",
+     "kernel_vcu_encoder", 1}};
+
 typedef struct {
 	xrmContext*       xrm_ctx;
     int32_t           enc_load;
@@ -18,12 +26,19 @@ typedef struct {
 
 int32_t Encoder_ReservationQuery(XlnxEncoderCtx *enc_xrm_ctx)
 {
+
     xrmCuPoolProperty enc_cu_pool_prop;
 	int32_t func_id = 0;
     char pluginName[XRM_MAX_NAME_LEN];
     xrmPluginFuncParam plg_param;
     memset(&enc_cu_pool_prop, 0, sizeof(enc_cu_pool_prop));
-    enc_xrm_ctx->xrm_ctx = (xrmContext *)xrmCreateContext(XRM_API_VERSION_1);
+
+    enc_xrm_ctx->xrm_ctx = xrmCreateContext(XRM_API_VERSION_1);
+    if(enc_xrm_ctx->xrm_ctx == NULL) {
+        printf("creation of XRM context failed\n");
+        return -1;
+    }
+
     if (enc_xrm_ctx->xrm_ctx == NULL){
         return -1;
     }
@@ -32,6 +47,7 @@ int32_t Encoder_ReservationQuery(XlnxEncoderCtx *enc_xrm_ctx)
     enc_xrm_ctx->xma_enc_props.framerate.numerator   = 60;
     enc_xrm_ctx->xma_enc_props.framerate.denominator = 1;
     memset(&plg_param, 0, sizeof(xrmPluginFuncParam));
+
     void (*convertXmaPropsToJson)(void* props, char* funcName, char* jsonJob);
     void* handle = dlopen("/opt/xilinx/xrm/plugin/libxmaPropsTOjson.so", RTLD_NOW );
     convertXmaPropsToJson = dlsym(handle, "convertXmaPropsToJson");
@@ -46,6 +62,7 @@ int32_t Encoder_ReservationQuery(XlnxEncoderCtx *enc_xrm_ctx)
         enc_xrm_ctx->enc_load = atoi((char*)(strtok(plg_param.output, " ")));
         enc_xrm_ctx->enc_num = atoi((char*)(strtok(NULL, " ")));
     }
+
     int32_t cu_num = 0;
     enc_cu_pool_prop.cuListProp.sameDevice = true;
     enc_cu_pool_prop.cuListNum = 1;
@@ -63,8 +80,11 @@ int32_t Encoder_ReservationQuery(XlnxEncoderCtx *enc_xrm_ctx)
             cu_num++;
         }
     }
+
+
     enc_cu_pool_prop.cuListProp.cuNum = cu_num;	
-    int num_cu_pool = xrmCheckCuPoolAvailableNum(enc_xrm_ctx->xrm_ctx, &enc_cu_pool_prop);
+    printf("xrmCheckCuPoolAvailableNumV2 execute \n");
+    int num_cu_pool = xrmCheckCuPoolAvailableNumV2(enc_xrm_ctx->xrm_ctx, &enc_cu_pool_prop);
     if(num_cu_pool <= 0){
         return -1;
     }
@@ -82,9 +102,67 @@ int32_t Encoder_ReservationQuery(XlnxEncoderCtx *enc_xrm_ctx)
     return 0;
 }
 
+# if 0
+int get_stream_info(const char *filepath, int *height, int *width, int *fps)
+{
+	AVFormatContext* pFormatCtx;
+	static int video_stream_index;	
+	// char filepath[] = "./1080p.264";
+	// char filepath[] = *video_file;
+	// int height = 0;
+	// int width = 0;
+	// int bitrate = 0;
+	int ret = 0;
+
+	// av_register_all();
+	//avformat_network_init();
+	pFormatCtx = avformat_alloc_context();
+
+	// 1.open video file：get the head，out info in "AVFormatContext pFormatCtx"
+	if (avformat_open_input(&pFormatCtx, filepath, NULL, NULL) != 0)
+	{
+		printf("Couldn't open input stream.\n");
+		return -1;
+	}else{
+		av_dump_format(pFormatCtx, 0, filepath, 0);//打印关于输入或输出格式的详细信息，例如持续时间，比特率，流，容器，程序，元数据，边数据，编解码器和时基。
+		if (avformat_find_stream_info(pFormatCtx, NULL)<0)
+		{
+			printf("Couldn't find stream information.\n");
+			ret = -1;
+		}else{
+
+			video_stream_index = av_find_best_stream(pFormatCtx, AVMEDIA_TYPE_VIDEO, -1, -1, NULL, 0);
+			*height  = pFormatCtx->streams[video_stream_index]->codecpar->height;
+			*width = pFormatCtx->streams[video_stream_index]->codecpar->width;
+			*fps = pFormatCtx->streams[video_stream_index]->avg_frame_rate.num;
+			// bitrate = pFormatCtx->streams[video_stream_index]->codecpar->bit_rate;
+
+			printf("avg_frame_rate num %d \n", pFormatCtx->streams[video_stream_index]->avg_frame_rate.num);
+			printf("avg_frame_rate den %d \n", pFormatCtx->streams[video_stream_index]->avg_frame_rate.den);
+
+
+			// printf("height = %d \n", height);
+			// printf("width = %d \n", width);
+			// printf("bitrate = %d \n", bitrate);
+			// printf("package size = %d \n", pFormatCtx->packet_size);
+			// printf("frame size = %d \n ", pFormatCtx->streams[video_stream_index]->codec->frame_size);
+		}
+	}
+	
+	avformat_close_input(&pFormatCtx);
+
+	return ret;
+}
+# endif 
+
+char filepath[] = "/home/xilinx/Documents/1080p.264";
 int main()
 {
-	XlnxEncoderCtx *enc_ctx = (XlnxEncoderCtx*)malloc(30000);
+    // int height;
+	// int width;
+	// int fps;
+
+	XlnxEncoderCtx *enc_ctx = (XlnxEncoderCtx*)malloc(sizeof(XlnxEncoderCtx));
 	memset(enc_ctx, 0, sizeof(XlnxEncoderCtx));
 	int ret = Encoder_ReservationQuery(enc_ctx);
 	return ret;

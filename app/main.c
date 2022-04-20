@@ -69,6 +69,7 @@ int main()
 
     int height;
 	int width;
+	int fps;
 	
 	unsigned long max_size;
 	unsigned char* tmpbuf;
@@ -81,12 +82,15 @@ int main()
 
 	int ret = 0;
 
-	ret = get_stream_info(filepath, &height, &width);
+	ret = get_stream_info(filepath, &height, &width, &fps);
 	if(ret == -1){
 		return ret;
 	}else{
+
 		printf("height = %d \n", height);
 		printf("width = %d \n", width);
+		printf("fps = %d \n", fps);
+
 		max_size = width*height;
 		tmpbuf = (unsigned char*)malloc(max_size * 3);
 		host_buffer = (unsigned char*)malloc(1920*1080*3);
@@ -133,7 +137,7 @@ int main()
 }
 #endif
 
-int get_stream_info(const char *filepath, int *height, int *width)
+int get_stream_info(const char *filepath, int *height, int *width, int *fps)
 {
 	AVFormatContext* pFormatCtx;
 	static int video_stream_index;	
@@ -164,7 +168,11 @@ int get_stream_info(const char *filepath, int *height, int *width)
 			video_stream_index = av_find_best_stream(pFormatCtx, AVMEDIA_TYPE_VIDEO, -1, -1, NULL, 0);
 			*height  = pFormatCtx->streams[video_stream_index]->codecpar->height;
 			*width = pFormatCtx->streams[video_stream_index]->codecpar->width;
+			*fps = pFormatCtx->streams[video_stream_index]->avg_frame_rate.num;
 			// bitrate = pFormatCtx->streams[video_stream_index]->codecpar->bit_rate;
+
+			printf("avg_frame_rate num %d \n", pFormatCtx->streams[video_stream_index]->avg_frame_rate.num);
+			printf("avg_frame_rate den %d \n", pFormatCtx->streams[video_stream_index]->avg_frame_rate.den);
 
 
 			// printf("height = %d \n", height);
